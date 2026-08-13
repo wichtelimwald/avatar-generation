@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/wichtelimwald/assistance/tree/main/docs
+    about: Check the documentation before filing an issue
+  - name: 📋 Backlog
+    url: https://github.com/wichtelimwald/assistance/blob/main/docs/todo.md
+    about: Review the backlog for existing entries before opening a new issue

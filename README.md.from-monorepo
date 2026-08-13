@@ -1,0 +1,161 @@
+# Shared Avatar Generation Framework
+
+Project-agnostic avatar/character image generation using the Leonardo.ai API.
+Each project provides its own **JSON character definitions** while sharing the
+generation engine, image post-processing pipeline, and selection GUI.
+
+## Quick Start
+
+```bash
+# Install dependencies
+pip install -r scripts/avatar-generation/requirements.txt
+
+# Dry-run: validate prompts without API calls
+python3 scripts/avatar-generation/generate.py \
+    --characters toogether/characters/toogether-avatars.json \
+    --dry-run --all
+
+# Generate portraits for all characters (requires API key)
+export LEONARDO_AI_API_KEY="your-key"
+python3 scripts/avatar-generation/generate.py \
+    --characters toogether/characters/toogether-avatars.json \
+    --all --mode portrait --seed 42
+
+# Generate org-spirits portraits
+python3 scripts/avatar-generation/generate.py \
+    --characters org-spirits-app/characters/org-spirits.json \
+    --all --mode portrait
+
+# Generate category key visuals
+python3 scripts/avatar-generation/generate.py \
+    --characters toogether/characters/category-visuals.json \
+    --all --mode key_visual --seed 42
+
+# Review and select avatars
+pip install -r scripts/avatar-generation/selector/requirements.txt
+python3 scripts/avatar-generation/selector/app.py \
+    --characters toogether/characters/toogether-avatars.json \
+    --avatars-dir toogether/generated-avatars
+```
+
+## Directory Structure
+
+```
+scripts/avatar-generation/
+├── generate.py              ← Main CLI entry point
+├── config.py                ← API defaults and configuration
+├── leonardo_api.py          ← Leonardo.ai API client
+├── image_processing.py      ← Pillow: circle crop, neon ring, composite
+├── prompt_builder.py        ← Build prompts from JSON character definitions
+├── requirements.txt         ← Python dependencies (requests, Pillow)
+├── README.md                ← This file
+├── characters/              ← Character definition files (JSON)
+│   ├── schema.json          ← JSON Schema for validation
+│   ├── toogether-avatars.json  ← 66 toogether characters
+│   └── org-spirits.json     ← 5 org-spirits characters
+└── selector/                ← Avatar selection GUI
+    ├── app.py               ← Flask backend (loads from JSON)
+    └── requirements.txt     ← Selector dependencies (Flask, Pillow, requests)
+```
+
+## Adding a New Project
+
+1. **Create a character JSON file** in `characters/` following `schema.json`.
+   Minimum required fields per character:
+   - `name` — Display name
+   - `character_prompt` — Character-specific prompt text
+
+2. **Define project-wide style** in the `style` block:
+   - `portrait_prompt` — Base style prepended to every portrait
+   - `portrait_negative` — Negative prompt for portraits
+   - `generation_params` — Leonardo.ai model, dimensions, steps
+
+3. **Run a dry-run** to validate prompts:
+   ```bash
+   python3 scripts/avatar-generation/generate.py \
+       --characters characters/my-project.json \
+       --dry-run --all
+   ```
+
+4. **Generate images:**
+   ```bash
+   python3 scripts/avatar-generation/generate.py \
+       --characters characters/my-project.json \
+       --all --mode composite --seed 42 \
+       --output my-project/generated-avatars
+   ```
+
+## CLI Reference
+
+```
+python3 scripts/avatar-generation/generate.py --characters <path> [options]
+
+Required:
+  --characters PATH    Path to JSON character definition file
+
+Selection (mutually exclusive):
+  --all                Generate all characters
+  --test               Generate test characters only
+  --character NAME     Generate a specific character by name
+  --archetype KEY      Generate all variants of an archetype
+
+Options:
+  --mode {portrait|background|composite|key_visual}   Generation mode (default: portrait)
+  --seed INT           Fixed seed for reproducibility
+  --output PATH        Output directory (default: <project>/generated-avatars)
+  --dry-run            Validate prompts without API calls
+  --post-process-only  Run circle-crop + compositing on existing images
+```
+
+## JSON Character Definition Format
+
+See `characters/schema.json` for the full JSON Schema. Key structure:
+
+```json
+{
+  "version": "1.0",
+  "project": "my-project",
+  "style": {
+    "portrait_prompt": "Base style prompt...",
+    "background_prompt": "Base background prompt...",
+    "portrait_negative": "Things to avoid...",
+    "background_negative": "Things to avoid in backgrounds...",
+    "generation_params": {
+      "model_id": "de7d3faf-762f-48e0-b3b7-9d0ac3a3fcf3",
+      "width": 1024,
+      "height": 1024,
+      "guidance_scale": 7,
+      "num_inference_steps": 30
+    },
+    "prompt_max_length": 1500
+  },
+  "characters": [
+    {
+      "name": "CharacterName",
+      "character_prompt": "Specific character description..."
+    }
+  ]
+}
+```
+
+### Optional Character Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `archetype` | string | Archetype key (groups characters) |
+| `age_group` | string | `child`, `teen`, or `adult` |
+| `gender` | string | For filename construction |
+| `eye_color` | string | Explicit eye colour in prompt |
+| `has_glasses` | boolean | Triggers glasses negative prompt |
+| `bg_colours` | [string, string] | Background gradient colours |
+| `bg_symbols` | string | Background symbol motifs |
+| `background_prompt_override` | string | Replaces style background prompt entirely |
+| `kv_prompt` | string | Key visual scene description (for `key_visual` mode) |
+| `color_theme` | object | Colour theme (primary, secondary, accent) |
+
+## Related Documentation
+
+- [Concept: Shared Avatar Generation](../../docs/concepts/shared-avatar-generation.md)
+- [ADR-0007: Shared Avatar Generation Framework](../../docs/decisions/ADR-0007-shared-avatar-generation.md)
+- [Avatar System Framework (toogether)](../../toogether/docs/concepts/avatar-system-framework.md)
+- [Design Concept (org-spirits)](../../org-spirits-app/docs/concepts/design-concept.md)

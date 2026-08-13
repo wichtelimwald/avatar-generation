@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Avatar Character Definitions",
+  "description": "Schema for project-specific character definition files used by the shared avatar generation framework.",
+  "type": "object",
+  "required": ["version", "project", "style", "characters"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version (major.minor format, e.g. '1.0').",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "project": {
+      "type": "string",
+      "description": "Project identifier (e.g. 'toogether', 'org-spirits')."
+    },
+    "style": {
+      "type": "object",
+      "description": "Project-wide style configuration for generation.",
+      "required": ["portrait_prompt", "portrait_negative", "generation_params", "prompt_max_length"],
+      "properties": {
+        "portrait_prompt": {
+          "type": "string",
+          "description": "Base style prompt prepended to every portrait generation."
+        },
+        "background_prompt": {
+          "type": "string",
+          "description": "Base style prompt prepended to every background generation."
+        },
+        "portrait_negative": {
+          "type": "string",
+          "description": "Negative prompt for portrait generation."
+        },
+        "background_negative": {
+          "type": "string",
+          "description": "Negative prompt for background generation."
+        },
+        "generation_params": {
+          "type": "object",
+          "description": "Leonardo.ai generation parameters.",
+          "required": ["model_id", "width", "height"],
+          "properties": {
+            "model_id": { "type": "string" },
+            "width": { "type": "integer", "minimum": 256 },
+            "height": { "type": "integer", "minimum": 256 },
+            "guidance_scale": { "type": "number" },
+            "num_inference_steps": { "type": "integer" },
+            "alchemy": { "type": "boolean" }
+          }
+        },
+        "prompt_max_length": {
+          "type": "integer",
+          "description": "Maximum character count for prompts (Leonardo.ai limit)."
+        },
+        "default_color_theme": {
+          "type": "object",
+          "description": "Default colour theme used when a character has no color_theme.",
+          "properties": {
+            "background_color": { "type": "string" },
+            "text_color": { "type": "string" },
+            "highlight_color": { "type": "string" }
+          }
+        }
+      }
+    },
+    "negative_prompt_groups": {
+      "type": "object",
+      "description": "Named groups of additional negative prompt text, applied based on character properties.",
+      "additionalProperties": { "type": "string" }
+    },
+    "archetypes": {
+      "type": "object",
+      "description": "Archetype definitions with colours and symbols (optional, project-specific).",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "colours": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "symbols": { "type": "string" },
+          "neon_rgb": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0, "maximum": 255 },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        }
+      }
+    },
+    "characters": {
+      "type": "array",
+      "description": "List of character definitions.",
+      "items": {
+        "type": "object",
+        "required": ["name", "character_prompt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Character display name."
+          },
+          "archetype": {
+            "type": "string",
+            "description": "Archetype key (references archetypes map)."
+          },
+          "age_group": {
+            "type": "string",
+            "enum": ["child", "teen", "adult"],
+            "description": "Age group for negative prompt selection."
+          },
+          "gender": {
+            "type": "string",
+            "description": "Gender identifier for filename construction."
+          },
+          "eye_color": {
+            "type": "string",
+            "description": "Explicit eye colour for prompt diversity."
+          },
+          "has_glasses": {
+            "type": "boolean",
+            "description": "Whether the character wears glasses (triggers glasses negative prompt)."
+          },
+          "character_prompt": {
+            "type": "string",
+            "description": "Character-specific prompt text appended to style prompt."
+          },
+          "background_prompt_override": {
+            "type": "string",
+            "description": "If set, replaces the style background_prompt entirely for this character."
+          },
+          "bg_colours": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Background gradient colours (overrides archetype colours)."
+          },
+          "bg_symbols": {
+            "type": "string",
+            "description": "Background symbol motifs (overrides archetype symbols)."
+          },
+          "color_theme": {
+            "type": "object",
+            "description": "Colour theme for the character. Used for UI styling (background, text, accent colours). Values are hex strings (e.g. '#FF8800').",
+            "properties": {
+              "primary": { "type": "string", "description": "Primary theme colour (org-spirits)." },
+              "secondary": { "type": "string", "description": "Secondary theme colour (org-spirits)." },
+              "accent": { "type": "string", "description": "Accent theme colour (org-spirits)." },
+              "background_color": { "type": "string", "description": "Background colour hex (earworm-hunt)." },
+              "text_color": { "type": "string", "description": "Text colour hex, must have ≥4.5:1 contrast against background_color (earworm-hunt)." },
+              "highlight_color": { "type": "string", "description": "Highlight / neon accent colour hex (earworm-hunt)." }
+            }
+          },
+          "avatar_asset_name": {
+            "type": "string",
+            "description": "Asset name for Xcode integration."
+          }
+        }
+      }
+    },
+    "test_characters": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of character names used for test generation runs."
+    }
+  }
+}

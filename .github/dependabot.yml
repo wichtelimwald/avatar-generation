@@ -1,0 +1,27 @@
+version: 2
+
+# Single-repo tool: monitor this repo's own pip requirements and GitHub
+# Actions only. Overrides the mono-repo's dependabot.yml, which the
+# manifest otherwise copies in verbatim — that file has per-directory
+# entries for mono-repo-only Swift projects (/toogether, /toogether-app,
+# /template-project) that don't exist here, and no "pip" ecosystem entry
+# at all (found via the identical bug on shared-ui/coverflow/markdown-ui,
+# 2026-08-13 — see docs/plans/plan-monorepo-spinoff-sequence.md Phase B-1/B-2).
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"

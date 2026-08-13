@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avatar Selector — Toogether</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- API Key Dialog -->
+<div id="apiKeyDialog" class="dialog-overlay" style="display:none;">
+  <div class="dialog">
+    <h3>🔑 Leonardo.ai API Key</h3>
+    <p>An API key is required for regeneration features.<br>
+       The key is stored in memory only (not written to disk).</p>
+    <p class="hint">You can also set <code>LEONARDO_AI_API_KEY</code> as an environment variable
+       or add it to a <code>.env</code> file in the repo root.</p>
+    <input type="password" id="apiKeyInput" placeholder="Enter your Leonardo.ai API key">
+    <div class="dialog-buttons">
+      <button onclick="submitApiKey()">Save Key</button>
+      <button class="secondary" onclick="closeApiKeyDialog()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Regeneration Output Dialog -->
+<div id="outputDialog" class="dialog-overlay" style="display:none;">
+  <div class="dialog wide">
+    <h3 id="outputDialogTitle">Generation Output</h3>
+    <pre id="outputDialogContent"></pre>
+    <div class="dialog-buttons">
+      <button onclick="closeOutputDialog()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main Layout -->
+<header>
+  <div class="header-left">
+    <h1>🎨 Avatar Selector</h1>
+    <span class="subtitle">Toogether Avatar Review Tool</span>
+  </div>
+  <div class="header-right">
+    <span id="apiKeyStatus" class="status-badge"></span>
+    <button class="icon-btn" onclick="showApiKeyDialog()" title="Set API Key">🔑</button>
+    <button class="icon-btn" onclick="showProgressPanel()" title="Progress Overview">📊</button>
+  </div>
+</header>
+
+<!-- Progress Panel -->
+<div id="progressPanel" class="progress-panel" style="display:none;">
+  <div class="progress-header">
+    <h2>📊 Selection Progress</h2>
+    <button class="icon-btn" onclick="hideProgressPanel()">✕</button>
+  </div>
+  <div class="progress-overview">
+    <div class="progress-bar-group">
+      <label>Portraits / Key Visuals Selected: <span id="progressPortraits">0/66</span></label>
+      <div class="progress-bar segmented" id="progressPortraitsBar"></div>
+    </div>
+    <div class="progress-bar-group">
+      <label>Backgrounds Selected: <span id="progressBackgrounds">0/66</span></label>
+      <div class="progress-bar segmented" id="progressBackgroundsBar"></div>
+    </div>
+    <div class="progress-bar-group">
+      <label>Both Selected: <span id="progressBoth">0/66</span></label>
+      <div class="progress-bar segmented" id="progressBothBar"></div>
+    </div>
+  </div>
+  <div id="progressArchetypes" class="progress-archetypes"></div>
+</div>
+
+<!-- Filters -->
+<div class="filters">
+  <div class="filter-group">
+    <label>Archetype:</label>
+    <select id="filterArchetype" onchange="applyFilters()">
+      <option value="">All</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Variant:</label>
+    <select id="filterVariant" onchange="applyFilters()">
+      <option value="">All</option>
+      <option value="adult_male">Adult Male</option>
+      <option value="adult_female">Adult Female</option>
+      <option value="teen_male">Teen Male</option>
+      <option value="teen_female">Teen Female</option>
+      <option value="child_male">Child Male</option>
+      <option value="child_female">Child Female</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Portrait Status:</label>
+    <select id="filterPortraitStatus" onchange="applyFilters()">
+      <option value="">Don't care</option>
+      <option value="selected">Selected</option>
+      <option value="not_selected">Not selected</option>
+      <option value="no_images">No images</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Background Status:</label>
+    <select id="filterBgStatus" onchange="applyFilters()">
+      <option value="">Don't care</option>
+      <option value="selected">Selected</option>
+      <option value="not_selected">Not selected</option>
+      <option value="no_images">No images</option>
+    </select>
+  </div>
+  <div class="filter-info">
+    <span id="filterCount">66 of 66</span>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="navigation">
+  <button id="btnPrev" onclick="navigatePrev()" title="Previous (←)">◀ Prev</button>
+  <div class="nav-info">
+    <span id="navPosition">1 / 66</span>
+    <span id="navCharacter" class="nav-character">WILD / Adult Male / Markus</span>
+  </div>
+  <button id="btnNext" onclick="navigateNext()" title="Next (→)">Next ▶</button>
+</div>
+
+<!-- Avatar Display -->
+<div class="avatar-display" id="avatarDisplay">
+  <div class="triple-grid">
+    <!-- Left: Portrait / Key Visual -->
+    <div class="quadrant" id="quadPortrait">
+      <div class="quadrant-header">
+        <span class="quadrant-label" id="portraitLabel">Portrait</span>
+        <span class="selection-badge" id="portraitSelectedBadge" style="display:none;">✓ Selected</span>
+      </div>
+      <div class="image-container">
+        <img id="imgPortrait" src="" alt="Portrait" onerror="this.style.display='none'">
+        <div class="placeholder" id="phPortrait">No portrait available</div>
+      </div>
+      <div class="seed-nav" id="portraitSeeds"></div>
+      <div class="quadrant-actions">
+        <button class="action-btn select" id="btnSelectPortrait" onclick="selectPortrait()">✓ Select Portrait</button>
+        <button class="action-btn deselect" id="btnDeselectPortrait" onclick="deselectPortrait()" style="display:none;">✗ Deselect</button>
+        <button class="action-btn regenerate" id="btnRegenPortrait" onclick="regeneratePortrait()">🔄 Regenerate</button>
+        <button class="action-btn sort-out" id="btnSortOutPortrait" onclick="sortOutPortrait()">🗑 Sort Out</button>
+      </div>
+    </div>
+    <!-- Center: Composite -->
+    <div class="quadrant" id="quadComposite">
+      <div class="quadrant-label" id="compositeLabel">Composite</div>
+      <div class="image-container">
+        <img id="imgComposite" src="" alt="Composite" onerror="this.style.display='none'">
+        <div class="placeholder" id="phComposite">No composite available</div>
+      </div>
+    </div>
+    <!-- Right: Background -->
+    <div class="quadrant" id="quadBackground">
+      <div class="quadrant-header">
+        <span class="quadrant-label">Background</span>
+        <span class="selection-badge" id="bgSelectedBadge" style="display:none;">✓ Selected</span>
+      </div>
+      <div class="image-container">
+        <img id="imgBackground" src="" alt="Background" onerror="this.style.display='none'">
+        <div class="placeholder" id="phBackground">No background available</div>
+      </div>
+      <div class="seed-nav" id="bgSeeds"></div>
+      <div class="quadrant-actions">
+        <button class="action-btn select" id="btnSelectBg" onclick="selectBackground()">✓ Select Background</button>
+        <button class="action-btn deselect" id="btnDeselectBg" onclick="deselectBackground()" style="display:none;">✗ Deselect</button>
+        <button class="action-btn regenerate" id="btnRegenBg" onclick="regenerateBackground()">🔄 Regenerate</button>
+        <button class="action-btn sort-out" id="btnSortOutBg" onclick="sortOutBackground()">🗑 Sort Out</button>
+        <button class="action-btn regenerate" id="btnArchBg" onclick="toggleArchetypeBgPicker()" title="Browse backgrounds from other variants of this archetype">🎨 Other Variants</button>
+      </div>
+    </div>
+  </div>
+  <!-- Archetype Background Picker -->
+  <div id="archetypeBgPicker" class="archetype-bg-picker" style="display:none;">
+    <div class="picker-header">
+      <span class="picker-label">🎨 Backgrounds from other <span id="pickerArchetype"></span> variants</span>
+      <button class="icon-btn" onclick="toggleArchetypeBgPicker()" title="Close" aria-label="Close archetype background picker">✕</button>
+    </div>
+    <div id="archetypeBgList" class="archetype-bg-list"></div>
+  </div>
+
+  <!-- Auto-generate banner -->
+  <div id="autoGenBanner" class="auto-gen-banner" style="display:none;">
+    <span>⚠️ Missing portrait and/or background for this character.</span>
+    <button onclick="autoGenerate()">🚀 Auto-Generate Missing Assets</button>
+  </div>
+</div>
+
+<!-- Character Info -->
+<div class="char-info" id="charInfo">
+  <div class="info-row">
+    <span class="info-label">Archetype:</span>
+    <span id="infoArchetype" class="info-value archetype-badge">—</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Variant:</span>
+    <span id="infoVariant" class="info-value">—</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Name:</span>
+    <span id="infoName" class="info-value">—</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Portrait Seed:</span>
+    <span id="infoPortraitSeed" class="info-value">—</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Background Seed:</span>
+    <span id="infoBgSeed" class="info-value">—</span>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+  <div class="spinner"></div>
+  <span id="loadingText">Loading...</span>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
